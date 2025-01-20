@@ -1,0 +1,190 @@
+#ifndef FUNCIONES_H
+#define FUNCIONES_H
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+// Secuencias de escape ANSI para colores en consola.
+#define COLOR_GREEN  "\033[32m"
+#define COLOR_RED	"\033[31m"
+#define COLOR_RESET  "\033[0m"
+
+void mostrarCaratula() {
+	printf("================================================================\n");
+	printf(" 	MATEMATICAS DISCRETAS I\n");
+	printf(" 	NOMBRES INTEGRANTES: NICOLAS GUERRA y FRANCIS JIMENEZ\n");
+	printf(" 	DESCRIPCION: Este programa genera una expresion\n");
+	printf("              	booleana en forma SOP a partir de\n");
+	printf("              	una tabla de verdad ingresada por\n");
+	printf("              	el usuario.\n");
+	printf(" 	ANIO LECTIVO: 2025\n");
+	printf("================================================================\n\n");
+}
+
+int obtenerNumeroVariables() {
+    int n;
+    char buffer[100]; // Para leer la entrada como cadena
+    do {
+        printf("Digite el numero de variables logicas (solo 2 o 3): ");
+        if (fgets(buffer, sizeof(buffer), stdin) != NULL) { // Leer entrada como cadena
+            // Intentar convertir a entero
+            if (sscanf(buffer, "%d", &n) != 1 || (n != 2 && n != 3)) {
+                printf("Error: Solo se permiten las opciones 2 o 3.\n");
+                n = 0; // Valor inválido para repetir el bucle
+            }
+        } else {
+            printf("Error al leer la entrada.\n");
+        }
+    } while (n != 2 && n != 3);
+
+    return n;
+}
+
+void generarTablaVerdad(int table[][3], int n, int maxRows) {
+	for(int i = 0; i < maxRows; i++) {
+    	for(int j = 0; j < n; j++) {
+        	table[i][j] = (i >> (n - 1 - j)) & 1;
+    	}
+	}
+}
+
+void ingresarSalidas(int output[], int table[][3], int n, int maxRows) {
+	printf("\nIngrese los valores de salida (0 o 1) para cada fila:\n\n");
+    
+	if(n == 2) {
+    	printf(" A   B   S\n");
+    	printf("-----------\n");
+	} else {
+    	printf(" A   B   C   S\n");
+    	printf("----------------\n");
+	}
+
+	for(int i = 0; i < maxRows; i++) {
+    	if(n == 2) {
+        	printf("[%d] [%d]   ", table[i][0], table[i][1]);
+    	} else {
+        	printf("[%d] [%d] [%d]   ", table[i][0], table[i][1], table[i][2]);
+    	}
+   	 
+    	int val;
+    	do {
+        	scanf("%d", &val);
+        	if(val != 0 && val != 1) {
+            	printf("Error: Solo se permiten 0 o 1. Reingrese: ");
+        	}
+    	} while(val != 0 && val != 1);
+   	 
+    	output[i] = val;
+	}
+}
+
+void construirExpresionSOP(char *expression, int output[], int table[][3], int n, int maxRows) {
+	expression[0] = '\0';
+	char varNames[3] = {'A', 'B', 'C'};
+    
+	int firstTerm = 1;
+	for(int i = 0; i < maxRows; i++) {
+    	if(output[i] == 1) {
+        	char term[256] = "(";
+        	for(int j = 0; j < n; j++) {
+            	char temp[10];
+            	if(table[i][j] == 1) {
+                	// Variable directa
+                	sprintf(temp, "%c", varNames[j]);
+            	} else {
+                	// Negacion con apostrofe ASCII
+                	sprintf(temp, "%c'", varNames[j]);
+            	}
+            	strcat(term, temp);
+           	 
+            	if(j < n - 1) {
+                	strcat(term, "*");
+            	}
+        	}
+        	strcat(term, ")");
+
+        	if(!firstTerm) {
+            	strcat(expression, " + ");
+        	} else {
+            	firstTerm = 0;
+        	}
+        	strcat(expression, term);
+    	}
+	}
+}
+
+void imprimirExpresionGenerada(const char *expression) {
+	printf("\n4. Generacion de expresion booleana\n");
+	if(expression[0] == '\0') {
+    	printf("La expresion booleana generada es: 0\n");
+	} else {
+    	printf("La expresion booleana generada es: %s\n", expression);
+	}
+}
+
+/**
+ * Muestra la tabla de verdad en colores:
+ *  - Para n=2, se asume la expresión A'*B + B'*A y se colorean
+ *	los minitérminos parciales en verde y el resultado en rojo.
+ *  - Para n=3, se colorea la salida final (tomada de output[]) en
+ *	verde si es 0 y en rojo si es 1, fila por fila.
+ */
+void mostrarTablaColoreada(int table[][3], int output[], int n) {
+	printf("\n5. Generacion de la TABLA DE VERDAD\n");
+    
+	if(n == 2) {
+    	// Expresion fija: A'*B + B'*A
+    	printf("Tabla de verdad de la expresion A'*B + B'*A\n\n");
+    	printf(" A' * B   	+  	B' * A\n");
+    	printf("---------------------------------------\n");
+   	 
+    	for(int i = 0; i < 4; i++) {
+        	int A = table[i][0];
+        	int B = table[i][1];
+       	 
+        	int A_ = (A == 0) ? 1 : 0; // A'
+        	int B_ = (B == 0) ? 1 : 0; // B'
+       	 
+        	int parcialAB = A_ && B;   // A'*B
+        	int parcialBA = B_ && A;   // B'*A
+        	int resultado = parcialAB || parcialBA;
+       	 
+        	// Colorear parciales en verde, resultado final en rojo
+        	printf(" %d'(%d)%d(%d) => %s%d%s   +   %d'(%d)%d(%d) => %s%d%s   =>   %s%d%s\n",
+               	A, A_, B, B,
+               	COLOR_GREEN, parcialAB, COLOR_RESET,
+               	B, B_, A, A,
+               	COLOR_GREEN, parcialBA, COLOR_RESET,
+               	COLOR_RED, resultado, COLOR_RESET
+               	);
+    	}
+	}
+	else {
+    	// n=3 => colorear la SALIDA REAL (output[i]) en verde si 0, rojo si 1
+    	printf("Tabla de verdad para 3 variables (A, B, C).\n\n");
+   	 
+    	// Encabezado
+    	printf(" A   B   C   ->  Salida\n");
+    	printf("-------------------------\n");
+   	 
+    	int maxRows = 8; // 2^3
+    	for(int i = 0; i < maxRows; i++) {
+        	int A = table[i][0];
+        	int B = table[i][1];
+        	int C = table[i][2];
+       	 
+        	// Obtenemos la salida del arreglo output
+        	int valSalida = output[i];
+       	 
+        	// Elegimos color segun valSalida
+        	const char* color = (valSalida == 1) ? COLOR_RED : COLOR_GREEN;
+       	 
+        	printf(" %d   %d   %d   ->  %s%d%s\n",
+               	A, B, C,
+               	color, valSalida, COLOR_RESET);
+    	}
+	}
+}
+
+#endif // FUNCIONES_H
